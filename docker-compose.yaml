@@ -1,0 +1,43 @@
+---
+version: '3.7'
+services:
+  cassandra-node1-cdc1:
+    image: cassandra:4.0
+    hostname: cassandra-node1-cdc1
+    container_name: cassandra-node1-cdc1
+    environment:
+      CASSANDRA_DC: dc1
+      CASSANDRA_RACK: rack1
+      JVM_OPTS: "-Dcom.sun.management.jmxremote.port=9050 -Dcom.sun.management.jmxremote.rmi.port=9050 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=192.168.68.52"
+    volumes:
+      - ./conf/etc/cassandra/cassandra.yaml:/etc/cassandra/cassandra.yaml:rw
+      - ./conf/etc/debezium/cdc.properties:/etc/debezium/cdc.properties:rw
+      - ./deps/binaries/debezium-connector-cassandra-4-2.5.0.Final-jar-with-dependencies.jar:/debezium-connector-cassandra-4-2.5.0.Final-jar-with-dependencies.jar:rw
+    ports:
+      - "0.0.0.0:9042:9042"
+      - "0.0.0.0:9050:9050"
+    entrypoint:
+      - bash
+      - -c
+      - |
+        /usr/local/bin/docker-entrypoint.sh
+  kafka2:
+    image: confluentinc/cp-kafka
+    container_name: kafka2
+    hostname: kafka2
+    ports:
+      - "0.0.0.0:9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT'
+      KAFKA_LISTENERS: 'INTERNAL://kafka2:29092,CONTROLLER://kafka2:29093,EXTERNAL://0.0.0.0:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'INTERNAL://kafka2:29092,EXTERNAL://192.168.68.52:9092'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'INTERNAL'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka2:29093'
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      CLUSTER_ID: 'ciWo7IWazngRchmPES6q5A=='
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'

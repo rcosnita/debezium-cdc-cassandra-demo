@@ -1,0 +1,26 @@
+plugins {
+    id 'application'
+}
+
+repositories {
+    mavenCentral()
+}
+
+def DRIVER_VERSION = "4.18.0"
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.8.2'
+    implementation 'com.google.guava:guava:31.0.1-jre'
+
+    implementation "org.apache.cassandra:java-driver-core:${DRIVER_VERSION}"
+    implementation "org.apache.cassandra:java-driver-query-builder:${DRIVER_VERSION}"
+    implementation "org.apache.cassandra:java-driver-mapper-runtime:${DRIVER_VERSION}"
+}
+
+application {
+    mainClass = 'com.rcosnita.cdc.data.ingester.App'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
