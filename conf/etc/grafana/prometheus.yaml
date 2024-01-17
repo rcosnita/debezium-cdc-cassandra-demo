@@ -1,0 +1,11 @@
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    orgId: 1
+    uid: prom_stable_1
+    url: http://192.168.68.52:9090
+    isDefault: true
+    version: 1
+    editable: false

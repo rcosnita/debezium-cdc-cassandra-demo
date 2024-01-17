@@ -15,7 +15,7 @@ import java.util.concurrent.*;
 
 public class App {
     private static final long PERSON_CONTENT_SIZE_BYTES = 4096;
-    private static final int MAX_NUM_PERSONS = 5_000;
+    private static final int MAX_NUM_PERSONS = Integer.parseInt(System.getenv().getOrDefault("MAX_NUM_PERSONS", "5000"));
     private static final ExecutorService EXECUTOR_SVC = Executors.newFixedThreadPool(10);
 
     public static void main(String[] args) throws Exception {

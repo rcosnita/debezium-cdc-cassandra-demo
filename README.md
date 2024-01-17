@@ -9,6 +9,7 @@ docker-compose up
 ```bash
 docker-compose exec kafka2 bash
 kafka-topics --bootstrap-server 192.168.68.52:9092 --create --topic my_cluster.cdc_experiment.persons --replication-factor 1 --partitions 10
+kafka-topics --bootstrap-server 192.168.68.52:9092 --create --topic my_cluster.cdc_experiment.persons.processed --replication-factor 1 --partitions 10
 kafka-topics --list --bootstrap-server 192.168.68.52:9092
 kafka-console-consumer --topic my_cluster.cdc_experiment.persons --bootstrap-server 192.168.68.52:9092
 ```

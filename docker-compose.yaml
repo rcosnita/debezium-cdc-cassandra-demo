@@ -41,3 +41,21 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       CLUSTER_ID: 'ciWo7IWazngRchmPES6q5A=='
       KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+  prometheus:
+    image: prom/prometheus:v2.43.0
+    hostname: prometheus
+    ports:
+      - 0.0.0.0:9090:9090
+    volumes:
+      - ./conf/etc/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+  grafana:
+    image: grafana/grafana:9.4.7
+    environment:
+      GF_PATHS_DATA: /var/lib/grafana
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
+    ports:
+      - 0.0.0.0:3000:3000
+    volumes:
+      - ./conf/etc/grafana/prometheus.yaml:/etc/grafana/provisioning/datasources/prometheus.yaml
+      - ./conf/etc/grafana/provisioning.yaml:/etc/grafana/provisioning/dashboards/main.yaml
+      - ./conf/etc/grafana/dashboards:/var/lib/grafana/dashboards
