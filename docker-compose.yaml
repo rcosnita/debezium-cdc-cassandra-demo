@@ -1,6 +1,27 @@
 ---
 version: '3.7'
 services:
+  cassandra-node1-cdc0:
+    image: cassandra:4.0
+    hostname: cassandra-node1-cdc0
+    container_name: cassandra-node1-cdc0
+    environment:
+      CASSANDRA_DC: dc2
+      CASSANDRA_RACK: rack1
+      CASSANDRA_SEEDS: cassandra-node1-cdc0,cassandra-node1-cdc1 
+      CASSANDRA_ENDPOINT_SNITCH: org.apache.cassandra.locator.GossipingPropertyFileSnitch
+      CASSANDRA_CLUSTER_NAME: my_cluster
+      # JVM_OPTS: "-Dcom.sun.management.jmxremote.port=9050 -Dcom.sun.management.jmxremote.rmi.port=9050 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=192.168.68.52"
+    volumes:
+      - ./conf/etc/cassandra/cassandra-dc0.yaml:/etc/cassandra/cassandra.yaml:rw
+    ports:
+      - "0.0.0.0:9042:9042"
+      # - "0.0.0.0:9050:9050"
+    entrypoint:
+      - bash
+      - -c
+      - |
+        /usr/local/bin/docker-entrypoint.sh
   cassandra-node1-cdc1:
     image: cassandra:4.0
     hostname: cassandra-node1-cdc1
@@ -8,14 +29,15 @@ services:
     environment:
       CASSANDRA_DC: dc1
       CASSANDRA_RACK: rack1
-      JVM_OPTS: "-Dcom.sun.management.jmxremote.port=9050 -Dcom.sun.management.jmxremote.rmi.port=9050 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=192.168.68.52"
+      CASSANDRA_SEEDS: cassandra-node1-cdc0,cassandra-node1-cdc1
+      CASSANDRA_ENDPOINT_SNITCH: org.apache.cassandra.locator.GossipingPropertyFileSnitch
+      CASSANDRA_CLUSTER_NAME: my_cluster
+      # JVM_OPTS: "-Dcom.sun.management.jmxremote.port=9050 -Dcom.sun.management.jmxremote.rmi.port=9050 -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=192.168.68.52"
     volumes:
       - ./conf/etc/cassandra/cassandra.yaml:/etc/cassandra/cassandra.yaml:rw
+      - ./conf/etc/cassandra/cassandra-debezium.yaml:/etc/cassandra/cassandra-debezium.yaml:rw
       - ./conf/etc/debezium/cdc.properties:/etc/debezium/cdc.properties:rw
       - ./deps/binaries/debezium-connector-cassandra-4-2.5.0.Final-jar-with-dependencies.jar:/debezium-connector-cassandra-4-2.5.0.Final-jar-with-dependencies.jar:rw
-    ports:
-      - "0.0.0.0:9042:9042"
-      - "0.0.0.0:9050:9050"
     entrypoint:
       - bash
       - -c

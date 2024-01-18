@@ -21,7 +21,7 @@ docker-compose exec cassandra-node1-cdc1 bash
 cqlsh
 
 CREATE KEYSPACE IF NOT EXISTS cdc_experiment
-    WITH REPLICATION = { 'class': 'SimpleStrategy', 'replication_factor': 1 }
+    WITH REPLICATION = { 'class': 'NetworkTopologyStrategy', 'dc1': 1, 'dc2': 1 }
     AND DURABLE_WRITES = 'true';
 
 DROP TABLE IF EXISTS cdc_experiment.persons;
@@ -64,3 +64,16 @@ java -Djdk.attach.allowAttachSelf=true \
   --add-opens jdk.management/com.sun.management.internal=ALL-UNNAMED \
   -jar ./debezium-connector-cassandra-4-2.5.0.Final-jar-with-dependencies.jar /etc/debezium/cdc.properties > debezium.stdout.log 2> debezium.stderr.log
 ```
+
+## Results
+
+![CDC Throughput results](docs/images/throughput-cdc.png)
+
+The above results were obtained by following the setup steps and then running two rounds of high load writes: 300K / round of testing.
+
+The following results were obtained:
+
+|**Round**|**Latency variation**|**Throughput (events/sec)**|
+|---------|---------------------|---------------------------|
+|**1**| 14 - 483 ms, avg ~ 200ms| 869/sec with a single consumer deduplicating events |
+|**2**| 66 - 481 ms, avg ~ 200ms| 857/sec with a single consumer deduplicating events |

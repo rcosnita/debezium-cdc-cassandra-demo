@@ -10,12 +10,21 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.Consumed;
+import org.apache.kafka.streams.processor.api.Processor;
+import org.apache.kafka.streams.processor.api.ProcessorContext;
+import org.apache.kafka.streams.processor.api.Record;
+import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.Stores;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.Properties;
 
 public class Main {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Main.class.getName());
+
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final String INPUT_TOPIC = "my_cluster.cdc_experiment.persons";
     private static final String OUTPUT_TOPIC = "my_cluster.cdc_experiment.persons.processed";
@@ -42,27 +51,65 @@ public class Main {
     }
 
     /**
+     * Provides a simple deduplication processor for persons changes. We assume a single change event is relevant
+     * for a given notification.
+     */
+    private static class DedupProcessor implements Processor<String, String, String, String> {
+        private ProcessorContext<String, String> context;
+        private final String storeName;
+
+        public DedupProcessor(String storeName) {
+            this.storeName = storeName;
+        }
+
+        @Override
+        public void process(Record<String, String> record) {
+            KeyValueStore<String, Boolean> store = context.getStateStore(this.storeName);
+            var personId = record.key();
+
+            if (store.putIfAbsent(personId, true) == null) {
+                this.context.forward(record);
+            } else {
+                this.context.commit();
+            }
+        }
+
+        @Override
+        public void init(ProcessorContext<String, String> context) {
+            this.context = context;
+        }
+    }
+
+    /**
      * Builds the Kafka Streams application and publishes the E2E latency time metric to prometheus.
      */
     private KafkaStreams buildApp() {
         final var builder = new StreamsBuilder();
-        var stream = builder.stream(INPUT_TOPIC, Consumed.with(Serdes.String(), Serdes.String()));
-        stream.mapValues((entry) -> {
-           try {
-               var tree = OBJECT_MAPPER.readTree(entry);
-               var creationTime = tree.get("after").get("creation_time").get("value").asLong();
-               var latency = Calendar.getInstance().getTimeInMillis() - creationTime;
+        builder.addStateStore(Stores.keyValueStoreBuilder(
+                        Stores.persistentKeyValueStore("persons-dedup"),
+                        Serdes.String(),
+                        Serdes.Boolean()))
+                .stream(INPUT_TOPIC, Consumed.with(Serdes.String(), Serdes.String()))
+                .process(() -> new DedupProcessor("persons-dedup"), "persons-dedup")
+                .mapValues((entry) -> {
+                   try {
+                       var tree = OBJECT_MAPPER.readTree(entry);
+                       var creationTime = tree.get("after").get("creation_time").get("value").asLong();
+                       var latency = Calendar.getInstance().getTimeInMillis() - creationTime;
 
-               numOfMessagesMetric.inc(1);
-               latencyMetric.observe(latency * 1.0 / 1000);
+                       numOfMessagesMetric.inc(1);
+                       latencyMetric.observe(latency * 1.0 / 1000);
 
-               return entry;
-           } catch (IOException ioex) {
-               throw new RuntimeException(ioex);
-           }
-        }).to(OUTPUT_TOPIC);
+                       return entry;
+                   } catch (IOException ioex) {
+                       throw new RuntimeException(ioex);
+                   }
+                }).to(OUTPUT_TOPIC);
 
-        return new KafkaStreams(builder.build(), buildKafkaConfig());
+        var app = new KafkaStreams(builder.build(), buildKafkaConfig());
+        app.start();
+
+        return app;
     }
 
     /**
@@ -89,7 +136,6 @@ public class Main {
         var httpServer = appCls.startPrometheus();
 
         var app = appCls.buildApp();
-        app.start();
 
         Runtime.getRuntime().addShutdownHook(new Thread(app::close));
         Runtime.getRuntime().addShutdownHook(new Thread(httpServer::close));

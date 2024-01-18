@@ -26,7 +26,7 @@ public class App {
         try (var session = CqlSession.builder()
                 .addContactEndPoint(new DefaultEndPoint(InetSocketAddress.createUnresolved("cassandra-node1-cdc1", 9042)))
                 .withKeyspace("cdc_experiment")
-                .withLocalDatacenter("datacenter1")
+                .withLocalDatacenter("dc2")
                 .build()) {
             while (iterator.hasNext() && --numOfPersons >= 0) {
                 pendingQueries.add(EXECUTOR_SVC.submit(() -> {
